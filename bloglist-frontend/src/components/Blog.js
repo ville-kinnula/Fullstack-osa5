@@ -1,64 +1,93 @@
 import React,  { useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { likeBlog, deleteBlog, commentBlog } from '../reducers/blogReducer'
+import { setNotification } from '../reducers/notificationReducer'
+import {
+  BrowserRouter as Router, Route, Switch, Link,
+   useHistory, useRouteMatch
+} from 'react-router-dom'
+import { FormControl, FilledInput, InputLabel, Button } from '@material-ui/core'
 
-const Blog = ({ blog, addLike, deleteBlog, user }) => {
-  const [visible, setVisible] = useState(false)
+const Blog = () => {
+  const [ comment, setComment ] = useState('')
+  const dispatch = useDispatch()
+  const user = useSelector(state => state.user)
+  const blogs = useSelector(state => state.blogs)
 
-  const blogStyleNotVisible = {
-    paddingTop: 10,
-    paddingLeft: 2,
-    border: 'solid',
-    borderWidth: 1,
-    marginBottom: 5,
-    display: visible ? 'none' : ''
-  }
+  const match = useRouteMatch('/blogs/:id')
+  const blog = match
+    ? blogs.find(blog => blog.id === match.params.id)
+    : null
 
-  const blogStyleVisible = {
-    paddingTop: 10,
-    paddingLeft: 2,
-    border: 'solid',
-    borderWidth: 1,
-    marginBottom: 5,
-    display: visible ? '' : 'none'
+  if (!blog) {
+    return null
   }
 
   const removeBlogVisible = { display: (user.username===blog.user.username) ? '' : 'none' }
 
-  const likeClick = () => {
-    var newObject = blog
-    newObject.likes = blog.likes + 1
-    addLike(newObject)
+  const like = async () => {
+    
+    dispatch(likeBlog(blog))
+      .then(() => dispatch(setNotification(`you liked '${blog.title}'`, 5, false)))
+      .catch(error => dispatch(setNotification(`${error.response.data.error}`, 5, true)))
   }
 
+
   const removeClick = () => {
-    deleteBlog(blog)
+    dispatch(deleteBlog(blog))
+      .then(() => {
+        dispatch(setNotification(`${blog.title} by ${blog.author} deleted`, 5, false))
+      })
+      .catch(error => {
+        dispatch(setNotification(`${error.response.data.error}`, 5,true))
+      })
   }
+
+  const submitComment = (event) => {
+    event.preventDefault()
+    dispatch(commentBlog(blog, comment))
+      .then(() => {
+        setComment('')
+        dispatch(setNotification(`comment added`, 5, false))
+      })
+      .catch(error => {
+        dispatch(setNotification(`${error.response.data.error}`, 5,true))
+      })
+  }
+
+  const handleFormChange = (event) => setComment(event.target.value)
 
   return (
     <div>
-      <div style={blogStyleNotVisible} className='viewLessBlog'>
-        {blog.title} {blog.author}
-        <button onClick={() => setVisible(true)}>view</button>
-      </div>
-      <div style={blogStyleVisible} className='viewMoreBlog'>
-        <p>
-          {blog.title} by {blog.author} <button onClick={() => setVisible(false)}>hide</button>
-        </p>
-        <p>
-          {blog.url}
-        </p>
-        <p>
-          Likes {blog.likes} <button onClick={likeClick}>like</button>
-        </p>
-        <p>
-          {blog.user.name}
-        </p>
-        <div style={removeBlogVisible} className='removeButton'>
+      <h2>{blog.title}</h2>
+      <a href={blog.url}>{blog.url}</a>
+      <div>{blog.likes} likes <button onClick={like}>like</button></div>
+      added by {blog.user.username}
+      <div style={removeBlogVisible} className='removeButton'>
           <button onClick={removeClick}>remove</button>
-        </div>
       </div>
+      <h3>Comments</h3>
+      <div>
+        <form onSubmit={submitComment}>
+          <div>
+          <FormControl variant='filled'>
+            <InputLabel htmlFor="component-simple">Comment here</InputLabel>
+            <FilledInput id="component-simple" value={comment} onChange={handleFormChange} />
+          </FormControl>
+          </div>
+          <div>
+            <Button variant="contained" color="primary" type="submit">
+              Add comment
+            </Button>
+          </div>
+        </form>
+      </div>
+      {blog.comments.map(comment => {
+        return <li key={Math.ceil(Math.random()*1000000)}>{comment}</li>
+      })}
     </div>
   )
-
 }
+
 
 export default Blog

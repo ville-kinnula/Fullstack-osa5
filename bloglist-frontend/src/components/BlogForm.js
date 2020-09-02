@@ -1,20 +1,27 @@
 import React, { useState } from 'react'
+import { useDispatch } from 'react-redux'
+import { createBlog } from '../reducers/blogReducer'
+import { setNotification } from '../reducers/notificationReducer'
 
-const BlogForm = ({ createBlog }) => {
+const BlogForm = () => {
   const [newTitle, setNewTitle] = useState('')
   const [newUrl, setNewUrl] = useState('')
   const [newAuthor, setNewAuthor] = useState('')
+
+  const dispatch = useDispatch()
 
 
   const handleAuthorChange = (event) => setNewAuthor(event.target.value)
   const handleTitleChange = (event) => setNewTitle(event.target.value)
   const handleUrlChange = (event) => setNewUrl(event.target.value)
 
-  const addBlog = (event) => {
+  const addBlog = async (event) => {
     event.preventDefault()
-    createBlog({
+    dispatch(createBlog({
       title: newTitle, author:newAuthor, url:newUrl
-    })
+    }))
+      .then(() => dispatch(setNotification(`A new blog ${newTitle} by ${newAuthor} added`, 5, false)))
+      .catch(error => dispatch(setNotification(`${error.response.data.error}`, 5, true)))
     setNewTitle('')
     setNewUrl('')
     setNewAuthor('')
